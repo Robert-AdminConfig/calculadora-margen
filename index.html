@@ -275,10 +275,23 @@ function calcularMargen(){
     margenReal.innerText = margen.toFixed(2) + "%";
     margenReal.className = margen < MARGEN_MINIMO ? "rojo" : "verde";
 }
+    btnLimpiar.addEventListener("click", limpiarProducto);
+
+function limpiarProducto(){
+    seleccionado = null;
+    buscador.value = "";
+    sugerencias.innerHTML = "";
+    precioVenta.value = "";
+    precioObjetivo.innerText = "$0";
+    margenReal.innerText = "0%";
+    margenReal.className = "neutro";
+}
+
 </script>
 
 </body>
 </html>
+
 
 
 
