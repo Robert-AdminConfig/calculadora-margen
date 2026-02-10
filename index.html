@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calculadora de Margen</title>
 
+<!-- PapaParse para CSV robusto -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
 <style>
 body{
     font-family: Arial, sans-serif;
@@ -94,6 +97,7 @@ input{
 
 <div class="container">
 
+    <!-- LOGOS -->
     <div class="logos">
         <img src="logos/qptechnology.png">
         <img src="logos/avision.png">
@@ -106,7 +110,7 @@ input{
     <h2>Calculadora de Margen Comercial</h2>
 
     <label>Buscar producto</label>
-    <input type="text" id="buscador" placeholder="Escribe referencia o interna">
+    <input type="text" id="buscador" placeholder="Referencia o referencia interna">
     <div id="sugerencias"></div>
 
     <div class="grid">
@@ -130,43 +134,53 @@ input{
             </div>
         </div>
     </div>
+
 </div>
 
 <script>
+/* =========================
+   CONFIGURACIÓN
+   ========================= */
 const URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_FGeAQqE1FinOqHj8on2Gzh7L0b3qDz-O1qYZBl--tPEtubeLossfblGY3gUDIN2xcqtqD24BIedl/pub?output=csv";
-
-let productos = [];
-let seleccionado = null;
 const MARGEN_MINIMO = 23;
 
 /* =========================
-   CARGA DE PRODUCTOS (CSV)
+   VARIABLES
    ========================= */
-fetch(URL_CSV)
-.then(res => res.text())
-.then(csv => {
-    const filas = csv.split("\n").slice(1);
+let productos = [];
+let seleccionado = null;
 
-    productos = filas.map(f => {
-        const columnas = f.split(",");
+/* =========================
+   CARGA DE PRODUCTOS
+   ========================= */
+Papa.parse(URL_CSV, {
+    download: true,
+    skipEmptyLines: true,
+    complete: function(resultado){
 
-        const referencia = (columnas[0] || "").trim();
-        const interna = (columnas[1] || "").trim();
+        productos = resultado.data
+            .slice(1) // quitar encabezado
+            .map(fila => {
 
-        // Unir el resto por si el número trae comas de miles
-        const costoTexto = columnas.slice(2).join(",")
-            .replace(/,/g, "")   // elimina separador de miles
-            .replace(/\r/g, "")
-            .trim();
+                const costoTexto = String(fila[2] || "")
+                    .replace(/,/g,"")
+                    .replace(/\r/g,"")
+                    .trim();
 
-        return {
-            referencia,
-            interna,
-            costo: Number(costoTexto)
-        };
-    }).filter(p => p.referencia && !isNaN(p.costo));
-})
-.catch(() => alert("Error cargando productos"));
+                return {
+                    referencia: String(fila[0] || "").trim(),
+                    interna: String(fila[1] || "").trim(),
+                    costo: Number(costoTexto)
+                };
+            })
+            .filter(p => p.referencia && !isNaN(p.costo));
+
+        console.log("Productos cargados:", productos.length);
+    },
+    error: function(){
+        alert("Error cargando los productos desde Google Sheets");
+    }
+});
 
 /* =========================
    EVENTOS
@@ -184,35 +198,39 @@ function mostrarSugerencias(){
     if(!texto) return;
 
     productos
-    .filter(p =>
-        p.referencia.toLowerCase().includes(texto) ||
-        p.interna.toLowerCase().includes(texto)
-    )
-    .slice(0,10)
-    .forEach(p => {
-        const div = document.createElement("div");
-        div.className = "item";
-        div.textContent = `${p.referencia} - ${p.interna}`;
-        div.onclick = () => seleccionar(p);
-        sugerencias.appendChild(div);
-    });
+        .filter(p =>
+            p.referencia.toLowerCase().includes(texto) ||
+            p.interna.toLowerCase().includes(texto)
+        )
+        .slice(0,10)
+        .forEach(p => {
+            const div = document.createElement("div");
+            div.className = "item";
+            div.textContent = `${p.referencia} - ${p.interna}`;
+            div.onclick = () => seleccionarProducto(p);
+            sugerencias.appendChild(div);
+        });
 }
 
-function seleccionar(p){
+function seleccionarProducto(p){
     seleccionado = p;
     buscador.value = `${p.referencia} - ${p.interna}`;
     sugerencias.innerHTML = "";
+
+    // reset SOLO el precio de venta
     precioVenta.value = 0;
+
     calcularPrecio();
     calcularMargen();
 }
 
 function calcularPrecio(){
     if(!seleccionado) return;
-    const m = Number(margenObjetivo.value);
-    if(!m) return;
 
-    const precio = seleccionado.costo / (1 - m/100);
+    const margen = Number(margenObjetivo.value);
+    if(!margen) return;
+
+    const precio = seleccionado.costo / (1 - margen / 100);
     precioObjetivo.innerText = "$" + Math.round(precio).toLocaleString("es-CO");
 }
 
