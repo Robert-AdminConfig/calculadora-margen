@@ -170,6 +170,17 @@ let seleccionado = null;
 /* =========================
    CARGA DE PRODUCTOS
    ========================= */
+
+function limpiarProducto(){
+    seleccionado = null;
+    buscador.value = "";
+    sugerencias.innerHTML = "";
+    precioVenta.value = "";
+    precioObjetivo.innerText = "$0";
+    margenReal.innerText = "0%";
+    margenReal.className = "neutro";
+}
+    
 Papa.parse(URL_CSV, {
     download: true,
     skipEmptyLines: true,
@@ -277,20 +288,13 @@ function calcularMargen(){
 }
     btnLimpiar.addEventListener("click", limpiarProducto);
 
-function limpiarProducto(){
-    seleccionado = null;
-    buscador.value = "";
-    sugerencias.innerHTML = "";
-    precioVenta.value = "";
-    precioObjetivo.innerText = "$0";
-    margenReal.innerText = "0%";
-    margenReal.className = "neutro";
-}
+
 
 </script>
 
 </body>
 </html>
+
 
 
 
