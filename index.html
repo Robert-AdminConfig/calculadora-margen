@@ -139,34 +139,57 @@ let productos = [];
 let seleccionado = null;
 const MARGEN_MINIMO = 23;
 
+/* =========================
+   CARGA DE PRODUCTOS (CSV)
+   ========================= */
 fetch(URL_CSV)
 .then(res => res.text())
 .then(csv => {
     const filas = csv.split("\n").slice(1);
-    productos = filas.map(f => {
-        const c = f.split(",");
-        return {
-            referencia: (c[0]||"").trim(),
-            interna: (c[1]||"").trim(),
-            costo: Number(c[2]||0)
-        };
-    });
-})
-.catch(err => alert("Error cargando productos"));
 
+    productos = filas.map(f => {
+        const columnas = f.split(",");
+
+        const referencia = (columnas[0] || "").trim();
+        const interna = (columnas[1] || "").trim();
+
+        // Unir el resto por si el número trae comas de miles
+        const costoTexto = columnas.slice(2).join(",")
+            .replace(/,/g, "")   // elimina separador de miles
+            .replace(/\r/g, "")
+            .trim();
+
+        return {
+            referencia,
+            interna,
+            costo: Number(costoTexto)
+        };
+    }).filter(p => p.referencia && !isNaN(p.costo));
+})
+.catch(() => alert("Error cargando productos"));
+
+/* =========================
+   EVENTOS
+   ========================= */
 buscador.addEventListener("input", mostrarSugerencias);
 margenObjetivo.addEventListener("input", calcularPrecio);
 precioVenta.addEventListener("input", calcularMargen);
 
+/* =========================
+   FUNCIONES
+   ========================= */
 function mostrarSugerencias(){
     const texto = buscador.value.toLowerCase();
     sugerencias.innerHTML = "";
     if(!texto) return;
 
-    productos.filter(p =>
+    productos
+    .filter(p =>
         p.referencia.toLowerCase().includes(texto) ||
         p.interna.toLowerCase().includes(texto)
-    ).slice(0,10).forEach(p => {
+    )
+    .slice(0,10)
+    .forEach(p => {
         const div = document.createElement("div");
         div.className = "item";
         div.textContent = `${p.referencia} - ${p.interna}`;
@@ -187,19 +210,27 @@ function seleccionar(p){
 function calcularPrecio(){
     if(!seleccionado) return;
     const m = Number(margenObjetivo.value);
+    if(!m) return;
+
     const precio = seleccionado.costo / (1 - m/100);
-    precioObjetivo.innerText = "$" + Math.round(precio).toLocaleString();
+    precioObjetivo.innerText = "$" + Math.round(precio).toLocaleString("es-CO");
 }
 
 function calcularMargen(){
-    if(!seleccionado) return;
+    if(!seleccionado){
+        margenReal.innerText = "0%";
+        margenReal.className = "neutro";
+        return;
+    }
+
     const precio = Number(precioVenta.value);
     if(!precio){
         margenReal.innerText = "0%";
         margenReal.className = "neutro";
         return;
     }
-    const margen = ((precio - seleccionado.costo)/precio)*100;
+
+    const margen = ((precio - seleccionado.costo) / precio) * 100;
     margenReal.innerText = margen.toFixed(2) + "%";
     margenReal.className = margen < MARGEN_MINIMO ? "rojo" : "verde";
 }
