@@ -120,13 +120,13 @@ input{
 
             <div class="result">
                 Precio sugerido:<br>
-                <span id="precioObjetivo">$</span>
+                <span id="precioObjetivo">$0</span>
             </div>
         </div>
 
         <div class="card">
             <label>Precio de venta</label>
-            <input type="number" id="precioVenta" value="">
+            <input type="number" id="precioVenta" value="0">
 
             <div class="result">
                 Margen real:<br>
@@ -218,7 +218,7 @@ function seleccionarProducto(p){
     sugerencias.innerHTML = "";
 
     // reset SOLO el precio de venta
-    precioVenta.value = ;
+    precioVenta.value = 0;
 
     calcularPrecio();
     calcularMargen();
@@ -256,6 +256,3 @@ function calcularMargen(){
 
 </body>
 </html>
-
-
-
