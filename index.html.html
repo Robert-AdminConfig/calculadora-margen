@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Margen | QP Technology</title>
+
+<style>
+body{
+    font-family: Arial, sans-serif;
+    background:#eef3f9;
+    padding:20px;
+}
+
+.container{
+    max-width:1100px;
+    margin:auto;
+    background:#9ECBFF;
+    padding:20px;
+    border-radius:18px;
+    box-shadow:0 12px 35px rgba(0,0,0,.15);
+}
+
+h2{
+    text-align:center;
+    color:#1e88e5;
+}
+
+.logos{
+    display:flex;
+    gap:18px;
+    justify-content:center;
+    align-items:center;
+    flex-wrap:wrap;
+    margin-bottom:20px;
+}
+
+.logos img{
+    height:55px;
+    object-fit:contain;
+}
+
+label{
+    font-weight:bold;
+    margin-top:15px;
+    display:block;
+}
+
+input{
+    width:100%;
+    padding:12px;
+    margin-top:5px;
+    border-radius:10px;
+    border:1px solid #ccc;
+    font-size:16px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+    margin-top:25px;
+}
+
+.card{
+    background:#FCA4DA;
+    padding:18px;
+    border-radius:14px;
+}
+
+.result{
+    margin-top:12px;
+    font-size:20px;
+    font-weight:bold;
+}
+
+.verde{color:#2e7d32;}
+.rojo{color:#c62828;}
+.neutro{color:#333;}
+
+#sugerencias{
+    border:1px solid #ccc;
+    border-radius:10px;
+    max-height:200px;
+    overflow:auto;
+    margin-top:5px;
+    background:#fff;
+}
+
+.item{
+    padding:10px;
+    cursor:pointer;
+}
+
+.item:hover{
+    background:#e3f2fd;
+}
+
+@media(max-width:768px){
+    .grid{grid-template-columns:1fr;}
+    .logos img{height:42px;}
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- LOGOS -->
+    <div class="logos">
+        <img src="logos/qptechnology.png">
+        <img src="logos/avision.png">
+        <img src="logos/qphome.png">
+        <img src="logos/pantum.png">
+        <img src="logos/qualiprint.png">
+        <img src="logos/ricoh.png">
+    </div>
+
+    <h2>Calculadora de Margen Comercial</h2>
+
+    <label>Buscar producto</label>
+    <input type="text" id="buscador" placeholder="Escribe referencia o referencia interna">
+    <div id="sugerencias"></div>
+
+    <div class="grid">
+        <div class="card">
+            <label>Margen objetivo (%)</label>
+            <input type="number" id="margenObjetivo" value="30">
+
+            <div class="result">
+                Precio sugerido:<br>
+                <span id="precioObjetivo">$0</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <label>Precio de venta</label>
+            <input type="number" id="precioVenta" placeholder="Ej: 85000">
+
+            <div class="result">
+                Margen real:<br>
+                <span id="margenReal" class="neutro">0%</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 🔗 ENLACE GOOGLE SHEETS (CSV)
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT_FGeAQqE1FinOqHj8on2Gzh7L0b3qDz-O1qYZBl--tPEtubeLossfblGY3gUDIN2xcqtqD24BIedl/pub?output=csv";
+
+let productos = [];
+let seleccionado = null;
+const MARGEN_MINIMO = 23;
+
+const buscador = document.getElementById("buscador");
+const sugerencias = document.getElementById("sugerencias");
+const margenObjetivo = document.getElementById("margenObjetivo");
+const precioObjetivo = document.getElementById("precioObjetivo");
+const precioVenta = document.getElementById("precioVenta");
+const margenReal = document.getElementById("margenReal");
+
+// 🚀 Cargar productos al iniciar
+window.addEventListener("load", cargarProductos);
+
+buscador.addEventListener("input", mostrarSugerencias);
+margenObjetivo.addEventListener("input", calcularPrecio);
+precioVenta.addEventListener("input", calcularMargen);
+
+async function cargarProductos(){
+    const res = await fetch(SHEET_URL);
+    const texto = await res.text();
+
+    const filas = texto.split("\n").map(f => f.split(","));
+    const headers = filas.shift().map(h => h.trim().toLowerCase());
+
+    productos = filas.map(f => {
+        const obj = {};
+        headers.forEach((h,i) => obj[h] = (f[i] || "").trim());
+        return {
+            referencia: obj["referencia"] || "",
+            interna: obj["referencia interna"] || "",
+            costo: Number(obj["costo"] || 0)
+        };
+    });
+
+    console.log("Productos cargados:", productos.length);
+}
+
+function mostrarSugerencias(){
+    const texto = buscador.value.toLowerCase();
+    sugerencias.innerHTML = "";
+    if(!texto || productos.length === 0) return;
+
+    productos
+    .filter(p =>
+        p.referencia.toLowerCase().includes(texto) ||
+        p.interna.toLowerCase().includes(texto)
+    )
+    .slice(0,10)
+    .forEach(p => {
+        const div = document.createElement("div");
+        div.className = "item";
+        div.textContent = `${p.referencia} - ${p.interna}`;
+        div.onclick = () => seleccionarProducto(p);
+        sugerencias.appendChild(div);
+    });
+}
+
+function seleccionarProducto(p){
+    seleccionado = p;
+    buscador.value = `${p.referencia} - ${p.interna}`;
+    sugerencias.innerHTML = "";
+
+    // reset SOLO precio de venta
+    precioVenta.value = "";
+    margenReal.innerText = "0%";
+    margenReal.className = "neutro";
+
+    calcularPrecio();
+}
+
+function calcularPrecio(){
+    if(!seleccionado) return;
+    const margen = Number(margenObjetivo.value);
+    if(!margen) return;
+
+    const precio = seleccionado.costo / (1 - margen/100);
+    precioObjetivo.innerText = "$" + Math.round(precio).toLocaleString();
+}
+
+function calcularMargen(){
+    if(!seleccionado) return;
+    const precio = Number(precioVenta.value);
+    if(!precio){
+        margenReal.innerText = "0%";
+        margenReal.className = "neutro";
+        return;
+    }
+    const margen = ((precio - seleccionado.costo) / precio) * 100;
+    margenReal.innerText = margen.toFixed(2) + "%";
+    margenReal.className = margen < MARGEN_MINIMO ? "rojo" : "verde";
+}
+</script>
+
+</body>
+</html>
