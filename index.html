@@ -89,26 +89,27 @@ let productos = [];
 let seleccionado = null;
 const MARGEN_MINIMO = 23;
 
-/* ========= CARGA CSV CORRECTA ========= */
+/* ========= CARGA CSV ROBUSTA ========= */
 Papa.parse(URL_CSV, {
     download: true,
-    header: true,
     skipEmptyLines: true,
-    complete: function(resultado){
-        productos = resultado.data.map(f => ({
-            referencia: f.referencia?.trim(),
-            interna: f.interna?.trim(),
-            costo: Number(
-                String(f.costo)
-                .replace(/,/g,"")
-                .trim()
-            )
-        })).filter(p => p.referencia && !isNaN(p.costo));
+    complete: function(res){
+        productos = res.data
+            .slice(1) // saltar encabezado
+            .map(row => {
+                const costoLimpio = String(row[2] || "")
+                    .replace(/,/g,"")
+                    .trim();
+
+                return {
+                    referencia: String(row[0] || "").trim(),
+                    interna: String(row[1] || "").trim(),
+                    costo: Number(costoLimpio)
+                };
+            })
+            .filter(p => p.referencia && !isNaN(p.costo));
 
         console.log("Productos cargados:", productos.length);
-    },
-    error: function(){
-        alert("Error cargando CSV");
     }
 });
 
