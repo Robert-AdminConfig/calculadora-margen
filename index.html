@@ -213,16 +213,22 @@ function mostrarSugerencias(){
         });
 }
 
-function seleccionarProducto(p){
+function seleccionarProducto(p){   
     seleccionado = p;
+
+    // Limpiar buscador y mostrar solo el seleccionado
     buscador.value = `${p.referencia} - ${p.interna}`;
     sugerencias.innerHTML = "";
 
-    // reset SOLO el precio de venta
-    precioVenta.value = 0;
+    // Limpiar precio de venta
+    precioVenta.value = "";
 
+    // Recalcular
     calcularPrecio();
-    calcularMargen();
+
+    // Reset margen real
+    margenReal.innerText = "0%";
+    margenReal.className = "neutro";
 }
 
 function calcularPrecio(){
@@ -257,4 +263,5 @@ function calcularMargen(){
 
 </body>
 </html>
+
 
